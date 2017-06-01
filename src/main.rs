@@ -51,10 +51,11 @@ fn main() {
                 .send()
                 .unwrap();
             let builds = serde_json::from_reader::<_, Builds>(res).unwrap().builds;
-            let sum = builds.iter().fold(0, |res, build| res + build.duration);
-            println!("build count: {}", builds.len());
+            let successes = builds.iter().filter(|b|b.result == "SUCCESS").collect::<Vec<_>>();
+            let sum = successes.iter().fold(0, |res, build| res + build.duration);
+            println!("build count: {}", successes.len());
             println!("avg duration: {}",
-                     Duration::from_millis(sum / builds.len() as u64).as_secs() / 60);
+                     Duration::from_millis(sum / successes.len() as u64).as_secs() / 60);
         }
         Err(err) => println!("error: {}", err),
     }
