@@ -70,7 +70,7 @@ fn main() {
             let builds = serde_json::from_reader::<_, Builds>(res).unwrap().builds;
             let successes = builds
                 .iter()
-                .filter(|b| b.result.iter().filter(|r| *r == "SUCCESS").next().is_some())
+                .filter(|b| b.result.iter().find(|r| *r == "SUCCESS").is_some())
                 .collect::<Vec<_>>();
             let sum = successes.iter().fold(0, |res, build| res + build.duration);
             println!(
