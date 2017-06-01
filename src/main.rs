@@ -5,12 +5,14 @@ extern crate serde_json;
 extern crate serde;
 extern crate hyper;
 extern crate hyper_native_tls;
+extern crate url;
 
-use std::time::Duration;
 use hyper::Client;
 use hyper::header::{Authorization, Basic};
 use hyper::net::HttpsConnector;
 use hyper_native_tls::NativeTlsClient;
+use std::time::Duration;
+use url::Url;
 
 #[derive(Deserialize)]
 struct Config {
@@ -36,28 +38,51 @@ struct Build {
 fn main() {
     match envy::from_env::<Config>() {
         Ok(config) => {
-            let res = Client::with_connector(HttpsConnector::new(NativeTlsClient::new()
-                    .unwrap()))
-                .get(
-                    &format!(
-                        "{host}/job/{job}/api/json?pretty=true&tree=builds%5Bnumber%2Cid%2Ctimestamp%2Cresult%2Cduration%5D",
-                        host = config.jenkins_host, job = config.job
+            let mut url = Url::parse(
+                &format!(
+                    "{host}/job/{job}/api/json",
+                    host = config.jenkins_host,
+                    job = config.job
+                )
+            )
+                    .unwrap();
+            url.query_pairs_mut()
+                .extend_pairs(
+                    vec![
+                        ("pretty", "true"),
+                        ("tree",
+                         "builds[number,id,timestamp,result,\
+                                                      duration]{0,}"),
+                    ]
+                );
+            let res = Client::with_connector(HttpsConnector::new(NativeTlsClient::new().unwrap()))
+                .get(url)
+                .header(
+                    Authorization(
+                        Basic {
+                            username: config.jenkins_username,
+                            password: Some(config.jenkins_password),
+                        }
                     )
-                 )
-                .header(Authorization(Basic {
-                    username: config.jenkins_username,
-                    password: Some(config.jenkins_password),
-                }))
+                )
                 .send()
                 .unwrap();
             let builds = serde_json::from_reader::<_, Builds>(res).unwrap().builds;
-            let successes = builds.iter()
+            let successes = builds
+                .iter()
                 .filter(|b| b.result.iter().filter(|r| *r == "SUCCESS").next().is_some())
                 .collect::<Vec<_>>();
             let sum = successes.iter().fold(0, |res, build| res + build.duration);
-            println!("build count: {}", successes.len());
-            println!("avg duration: {}",
-                     Duration::from_millis(sum / successes.len() as u64).as_secs() / 60);
+            println!(
+                "{job}.build_count {value}",
+                job = config.job,
+                value = successes.len()
+            );
+            println!(
+                "{job}.build_duration {value}",
+                job = config.job,
+                value = Duration::from_millis(sum / successes.len() as u64).as_secs() / 60
+            );
         }
         Err(err) => println!("error: {}", err),
     }
