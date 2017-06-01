@@ -6,6 +6,7 @@ extern crate serde;
 extern crate hyper;
 extern crate hyper_native_tls;
 
+use std::time::Duration;
 use hyper::Client;
 use hyper::header::{Authorization, Basic};
 use hyper::net::HttpsConnector;
@@ -26,10 +27,10 @@ struct Builds {
 
 #[derive(Deserialize, Debug)]
 struct Build {
-    duration: usize,
-    number: usize,
+    duration: u64,
+    number: u32,
     result: String,
-    timestamp: usize,
+    timestamp: u64,
 }
 
 fn main() {
@@ -50,8 +51,9 @@ fn main() {
                 .send()
                 .unwrap();
             let builds = serde_json::from_reader::<_, Builds>(res).unwrap().builds;
-            let sum = builds.iter().fold(|res, build| { res + build.duration },0);
-            println!("builds {:#?}", sum);
+            let sum = builds.iter().fold(0, |res, build| res + build.duration);
+            println!("build count: {}", builds.len());
+            println!("avg duration: {}", Duration::from_millis(sum / builds.len() as u64).as_secs() / 60);
         }
         Err(err) => println!("error: {}", err),
     }
