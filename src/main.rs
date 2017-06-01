@@ -29,7 +29,7 @@ struct Builds {
 struct Build {
     duration: u64,
     number: u32,
-    result: String,
+    result: Option<String>,
     timestamp: u64,
 }
 
@@ -51,7 +51,9 @@ fn main() {
                 .send()
                 .unwrap();
             let builds = serde_json::from_reader::<_, Builds>(res).unwrap().builds;
-            let successes = builds.iter().filter(|b|b.result == "SUCCESS").collect::<Vec<_>>();
+            let successes = builds.iter()
+                .filter(|b| b.result.iter().filter(|r| *r == "SUCCESS").next().is_some())
+                .collect::<Vec<_>>();
             let sum = successes.iter().fold(0, |res, build| res + build.duration);
             println!("build count: {}", successes.len());
             println!("avg duration: {}",
