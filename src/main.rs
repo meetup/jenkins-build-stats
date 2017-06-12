@@ -86,7 +86,9 @@ fn run() -> Result<()> {
     if !res.status.is_success() {
         return Err(errors::ErrorKind::InvalidJob(config.job).into());
     }
-    let builds = serde_json::from_reader::<_, Builds>(res)?.builds;
+    let builds = serde_json::from_reader::<_, Builds>(res)
+        .chain_err(|| "failed to parse builds")?
+        .builds;
     let successes = builds
         .iter()
         .filter(|b| b.result.iter().find(|r| *r == "SUCCESS").is_some())
