@@ -12,3 +12,12 @@ The following env vars are required
 | JENKINS_USERNAME  | jenkins username                  |
 | JENKINS_PASSWORD  | jenkins password                  |
 | JOB               | jenkins job name                  |
+
+
+## Usage
+
+For now, just run as a cargo main
+
+```bash
+$ JENKINS_HOST=xxx JENKINS_USERNAME=xxx JENKINS_PASSWORD=xxx JOB=xxx cargo run
+```
