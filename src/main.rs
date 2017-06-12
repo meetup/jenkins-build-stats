@@ -8,7 +8,9 @@ extern crate serde;
 extern crate hyper;
 extern crate hyper_native_tls;
 extern crate url;
+extern crate hdrsample;
 
+use hdrsample::Histogram;
 use hyper::Client;
 use hyper::header::{Authorization, Basic};
 use hyper::net::HttpsConnector;
@@ -27,6 +29,7 @@ pub mod errors {
             JSON(::serde_json::Error);
             HTTP(::hyper::Error);
             URL(::url::ParseError);
+            //Sample(::hdrsample::RecordError);
         }
     }
 }
@@ -93,18 +96,42 @@ fn run() -> Result<()> {
         .iter()
         .filter(|b| b.result.iter().find(|r| *r == "SUCCESS").is_some())
         .collect::<Vec<_>>();
-    let sum = successes
-        .iter()
-        .fold(0, |res, build| res + build.duration);
+    let mut histo = Histogram::<u64>::new(2).unwrap();
+    for build in successes {
+        histo.record(build.duration).unwrap();
+    }
+    //let sum = successes
+    //    .iter()
+    //    .fold(0, |res, build| res + build.duration);
     println!(
         "{job}.build_count {value}",
         job = config.job,
-        value = successes.len()
+        value = histo.count()
     );
     println!(
-        "{job}.build_duration {value}",
+        "{job}.build_duration.mean {value}",
         job = config.job,
-        value = Duration::from_millis(sum / successes.len() as u64).as_secs() / 60
+        value = Duration::from_millis(histo.mean() as u64).as_secs() / 60 //
+    );
+    println!(
+        "{job}.build_duration.max {value}",
+        job = config.job,
+        value = Duration::from_millis(histo.max()).as_secs() / 60 //
+    );
+    println!(
+        "{job}.build_duration.min {value}",
+        job = config.job,
+        value = Duration::from_millis(histo.min()).as_secs() / 60 //
+    );
+    println!(
+        "{job}.build_duration.stdev {value}",
+        job = config.job,
+        value = Duration::from_millis(histo.stdev() as u64).as_secs() / 60 //
+    );
+    println!(
+        "{job}.build_duration.90p {value}",
+        job = config.job,
+        value = Duration::from_millis(histo.value_at_percentile(90.0) as u64).as_secs() / 60 //
     );
     Ok(())
 }
