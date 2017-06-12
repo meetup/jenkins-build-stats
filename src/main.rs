@@ -100,9 +100,6 @@ fn run() -> Result<()> {
     for build in successes {
         histo.record(build.duration).unwrap();
     }
-    //let sum = successes
-    //    .iter()
-    //    .fold(0, |res, build| res + build.duration);
     println!(
         "{job}.build_count {value}",
         job = config.job,
